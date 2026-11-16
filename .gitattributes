@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.png binary
+# Generated JavaScript contains whitespace-significant Markdown string literals.
+packages/swift/Sources/WysiwygKit/Resources/editor/engine.js -whitespace

@@ -1,0 +1,26 @@
+{
+  "engineVersion": "0.1.0",
+  "protocolVersion": 1,
+  "assets": {
+    "LICENSE.txt": {
+      "bytes": 1080,
+      "sha256": "26cdf7ac9b6ea15e58846c148b46cf9cbc3f1953452f19fbacf9408752ade0cd"
+    },
+    "THIRD_PARTY_NOTICES.txt": {
+      "bytes": 81161,
+      "sha256": "59911db35a2b22c581edd30a1c6bb929517e353a16db2ecf08d118995ff06522"
+    },
+    "engine.js": {
+      "bytes": 570460,
+      "sha256": "e4237c506106fc90b0c7804e7270ae6071ca87d0d3c68f749b649ddebbe97f6d"
+    },
+    "index.html": {
+      "bytes": 508,
+      "sha256": "b3c938538ebe357950473286f21cccfd131a954c084f04127b3d43f4079dc689"
+    },
+    "style.css": {
+      "bytes": 4826,
+      "sha256": "f9c79eb89c20916f7e3842f19a11b061628136ba43d5f2a710244902e47af2ff"
+    }
+  }
+}

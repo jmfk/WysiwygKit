@@ -1,0 +1,9 @@
+node_modules
+.types
+**/dist
+**/bin
+**/obj
+**/.build
+**/Resources/editor
+*.pbxproj
+package-lock.json

@@ -1,0 +1,43 @@
+name: Verify
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check && npm run typecheck && npm test && npm run build
+      - run: node scripts/check-assets.mjs && python3 scripts/check-specs.py
+      - run: git diff --exit-code -- packages/swift/Sources/WysiwygKit/Resources/editor
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v7.0.2
+        if: failure()
+        with:
+          name: browser-failures
+          path: test-results/
+  apple:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - run: swift test
+      - run: swift build --package-path demos/swift
+      - run: xcodebuild -quiet -project demos/swift/iOS/WysiwygDemo.xcodeproj -scheme WysiwygDemo -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/editor-ios-build CODE_SIGNING_ALLOWED=NO build
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6.1.0
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet build demos/windows -c Release
+      - run: dotnet run --project tests/windows -c Release

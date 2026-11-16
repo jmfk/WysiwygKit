@@ -1,0 +1,38 @@
+{
+  "name": "@wysiwygkit/core",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Shared Markdown, HTML and Fountain WYSIWYG editor",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.34.0",
+    "@tiptap/starter-kit": "3.34.0",
+    "@tiptap/extension-image": "3.34.0",
+    "@tiptap/extension-table": "3.34.0",
+    "@tiptap/extension-list": "3.34.0",
+    "@tiptap/markdown": "3.34.0",
+    "dompurify": "3.3.3",
+    "@tiptap/pm": "3.34.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmfk/WysiwygKit.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/jmfk/WysiwygKit#readme",
+  "bugs": {
+    "url": "https://github.com/jmfk/WysiwygKit/issues"
+  }
+}

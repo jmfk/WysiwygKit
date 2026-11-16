@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><Version>0.1.0</Version>
+    <PackageReadmeFile>README.md</PackageReadmeFile><PackageId>WysiwygKit.Wpf</PackageId><Description>Shared Markdown, HTML and Fountain editor for WPF, using the offline WysiwygKit engine.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression><RepositoryUrl>https://github.com/jmfk/WysiwygKit</RepositoryUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <EmbeddedResource Include="../../swift/Sources/WysiwygKit/Resources/editor/*" LogicalName="Editor.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+  </ItemGroup>
+</Project>

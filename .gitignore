@@ -1,0 +1,16 @@
+node_modules/
+.types/
+dist/
+packages/*/dist/
+.build/
+.swiftpm/
+.DS_Store
+*.user
+**/bin/
+**/obj/
+playwright-report/
+test-results/
+.env*
+**/xcuserdata/
+**/project.xcworkspace/xcuserdata/
+*.xcuserstate
