@@ -25,7 +25,7 @@ WysiwygKit 0.1.0 is an **early preview**, not a completed stable-release claim. 
 | Visual regression | Six macOS per-browser light-Markdown/dark-Fountain baselines inspected; three visual tests pass against them |
 | Swift runtime | Three Swift tests pass, including actual WKWebView edit/export, revision guards and Fountain source preservation |
 | Apple demos | macOS executable builds; iOS simulator SDK build passes for arm64/x86_64 |
-| Windows | WPF library, demo and native smoke test compile on macOS; local NuGet pack succeeds. Runtime execution requires Windows/CI |
+| Windows | WPF library, demo and native smoke test compile on macOS; local NuGet pack succeeds. The real Windows WebView2 smoke test also passed in GitHub CI |
 | Installable web packages | Core/React npm tarballs install together in an isolated consumer; both packages import successfully |
 | Resource/spec checks | Bundled checksums match; specification structure and local links pass |
 
@@ -40,4 +40,4 @@ Local environment: macOS 26 arm64, Node 25.2.1, TypeScript 6.0.3, Swift 6.3.3, .
 - Reproducible performance baselines on representative large articles/screenplays and durable host-native recovery examples.
 - The optional Go service/containers remain conditional under PRD-0005. No Go backend artifact, registry publication or production deployment is claimed.
 
-GitHub CI adds the real Windows WebView2 smoke gate. Its result must be checked separately before declaring Windows runtime support. Visual baselines intentionally run through a separate command and are not silently compared across different OS/font environments.
+The first GitHub CI run passed both Apple verification and the real Windows WebView2 smoke gate. Its web installation exposed two omitted cross-platform optional dependencies in the npm lockfile; they were repaired without changing existing dependency versions. Visual baselines intentionally run through a separate command and are not silently compared across different OS/font environments.
