@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { fileURLToPath } from 'node:url'
 import type { WysiwygEditor } from '../../packages/core/src/index'
 declare global {
   interface Window {
@@ -158,14 +159,9 @@ test('shared surface visual regression @visual', async ({ page }) => {
 })
 test('local image insertion and focal metadata survive export/reload', async ({ page }) => {
   await page.locator('[data-command=image]').click()
-  await page.locator('input[type=file]').setInputFiles({
-    name: 'pixel.png',
-    mimeType: 'image/png',
-    buffer: Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR0cAAAAASUVORK5CYII=',
-      'base64',
-    ),
-  })
+  await page
+    .locator('input[type=file]')
+    .setInputFiles(fileURLToPath(new URL('../fixtures/pixel.png', import.meta.url)))
   await expect(page.locator('.wk-image img')).toBeVisible()
   await page.locator('.wk-image img').click()
   expect(
