@@ -22,7 +22,7 @@ The [active ADRs](adrs/index.md) cover a shared editor engine, thin platform ada
 
 ## Current state
 
-An early implementation now includes all four library surfaces and separate demos. PRD-0002/0003/0004/0006 are in progress; PRD-0005 remains a conditional draft. [Implementation status](../docs/status.md) records verified tests/builds and remaining acceptance work. Runtime translation review, full provider integrations and a stable release are not complete.
+An early implementation now includes all four library surfaces and separate demos. PRD-0002/0003/0004/0006 are in progress; PRD-0005 remains a conditional draft. [Implementation status](../docs/status.md) records verified tests/builds and remaining acceptance work. Runtime translation review, additional provider/platform integration acceptance and a stable release are not complete. The first S3-compatible/imgproxy reference integration is implemented under [ADR-0014](adrs/active/0014-s3-imgproxy-reference-integration.md).
 
 ## Indexes
 

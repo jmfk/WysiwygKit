@@ -95,3 +95,25 @@ for (const path of ['packages/core/dist', 'packages/react/dist']) {
   await cp('README.md', path + '/README.md')
 }
 console.log('Built core, React and the shared offline native engine.')
+
+for (const name of ['media', 'media-server']) {
+  const pkg = JSON.parse(await readFile(`packages/${name}/package.json`, 'utf8'))
+  await build({
+    configFile: false,
+    build: {
+      lib: {
+        entry: resolve(`packages/${name}/src/index.ts`),
+        formats: ['es'],
+        fileName: () => 'index.js',
+      },
+      outDir: `packages/${name}/dist`,
+      rollupOptions: {
+        external: (id) =>
+          id.startsWith('node:') ||
+          Object.keys(pkg.dependencies ?? {}).some((dep) => id === dep || id.startsWith(dep + '/')),
+      },
+    },
+  })
+  await cp(`.types/${name}/src`, `packages/${name}/dist`, { recursive: true })
+  await cp('LICENSE', `packages/${name}/dist/LICENSE`)
+}

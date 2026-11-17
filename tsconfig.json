@@ -27,6 +27,12 @@
       ],
       "@wysiwygkit/react": [
         "packages/react/src/index.tsx"
+      ],
+      "@wysiwygkit/media": [
+        "packages/media/src/index.ts"
+      ],
+      "@wysiwygkit/media-server": [
+        "packages/media-server/src/index.ts"
       ]
     },
     "ignoreDeprecations": "6.0"

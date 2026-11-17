@@ -6,7 +6,9 @@
   "license": "MIT",
   "workspaces": [
     "packages/core",
-    "packages/react"
+    "packages/react",
+    "packages/media",
+    "packages/media-server"
   ],
   "engines": {
     "node": ">=22.12"
@@ -20,8 +22,11 @@
     "verify": "npm run typecheck && npm test && npm run build && npm run test:browser",
     "dev": "vite --host 127.0.0.1 --port 13700 --strictPort",
     "test:visual": "playwright test --config playwright.visual.config.ts",
-    "format": "prettier --write \"packages/**/*.{ts,tsx}\" \"demos/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"scripts/*.mjs\" \"*.ts\"",
-    "format:check": "prettier --check \"packages/**/*.{ts,tsx}\" \"demos/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"scripts/*.mjs\" \"*.ts\""
+    "format": "prettier --write \"packages/**/*.{ts,tsx}\" \"demos/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"demos/**/*.mjs\" \"*.ts\"",
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx}\" \"demos/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"demos/**/*.mjs\" \"*.ts\"",
+    "dev:media": "node --env-file=.env.local demos/media/server.mjs",
+    "test:media": "node --env-file=.env.local node_modules/vitest/vitest.mjs run --config vitest.media.config.ts",
+    "test:media:browser": "playwright test --config playwright.media.config.ts"
   },
   "dependencies": {
     "@tiptap/core": "3.34.0",

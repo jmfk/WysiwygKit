@@ -10,6 +10,8 @@
   },
   "include": [
     "packages/core/src/**/*.ts",
-    "packages/react/src/**/*.tsx"
+    "packages/react/src/**/*.tsx",
+    "packages/media/src/**/*.ts",
+    "packages/media-server/src/**/*.ts"
   ]
 }

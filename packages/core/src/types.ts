@@ -4,6 +4,7 @@ export type Direction = 'auto' | 'ltr' | 'rtl'
 export type Diagnostic = { code: string; message: string; severity: 'warning' | 'error' }
 export type Point = { x: number; y: number }
 export type Asset = { id: string; version: string; width: number; height: number; uri: string }
+export type ImageDelivery = { url: string; expiresAt?: number; width?: number; height?: number }
 export type ImageMetadata = {
   occurrenceId: string
   asset?: Asset
@@ -45,7 +46,7 @@ export type EditorOptions = {
   onAutosave?: (snapshot: Snapshot) => void | Promise<void>
   autosaveDelay?: number
   uploadImage?: (file: File, signal: AbortSignal) => Promise<Asset>
-  resolveAsset?: (asset: Asset, signal: AbortSignal) => Promise<string>
+  resolveAsset?: (asset: Asset, signal: AbortSignal) => Promise<string | ImageDelivery>
 }
 export type CommandId =
   | 'bold'

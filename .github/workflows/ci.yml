@@ -1,5 +1,9 @@
 name: Verify
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -25,6 +29,27 @@ jobs:
         with:
           name: browser-failures
           path: test-results/
+  media:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24.22.2'
+          cache: npm
+      - run: npm ci && npm run build
+      - name: Provision isolated RAM-backed S3 and imgproxy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash scripts/media/ci-fixtures.sh
+          python3 scripts/media/test-stack.py up --context '' --mc "$RUNNER_TEMP/wysiwyg-media-fixtures/mc" --minio-image bep9j4-test-minio:2025-09-07
+      - run: node --env-file=.local/media-test.env node_modules/vitest/vitest.mjs run --config vitest.media.config.ts
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:media:browser
+      # Deliberately no browser traces, screenshots or network artifact uploads: capabilities are private.
+      - if: always()
+        run: python3 scripts/media/test-stack.py down --context ''
   apple:
     runs-on: macos-latest
     steps:

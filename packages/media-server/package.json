@@ -1,0 +1,33 @@
+{
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "name": "@wysiwygkit/media-server",
+  "description": "Server-only S3 immutable uploads and imgproxy integration for existing Node hosts",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1170.0",
+    "@aws-sdk/s3-request-presigner": "3.1170.0",
+    "sharp": "0.35.5",
+    "@wysiwygkit/core": "0.1.0",
+    "@wysiwygkit/media": "0.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jmfk/WysiwygKit.git",
+    "directory": "packages/media-server"
+  }
+}
