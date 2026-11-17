@@ -2,6 +2,7 @@ import { Editor, Extension, Mark, type JSONContent } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import { Plugin } from '@tiptap/pm/state'
+import { closeHistory } from '@tiptap/pm/history'
 import { TableKit } from '@tiptap/extension-table'
 import { TaskList, TaskItem } from '@tiptap/extension-list'
 import { Markdown } from '@tiptap/markdown'
@@ -67,6 +68,7 @@ const languageAttrs = Extension.create({
 export type Match = { from: number; to: number }
 export class WysiwygEditor {
   readonly ready: Promise<void>
+  private imageRefreshers = new Set<() => void>()
   private engine!: Editor
   private surface: Surface
   private options: EditorOptions
@@ -248,6 +250,7 @@ export class WysiwygEditor {
           let current = node,
             renderTicket = 0
           let layoutFrame: number | undefined
+          let refreshTimer: ReturnType<typeof setTimeout> | undefined
           const resize = new ResizeObserver(() => {
             if (layoutFrame !== undefined) cancelAnimationFrame(layoutFrame)
             layoutFrame = requestAnimationFrame(layout)
@@ -282,6 +285,7 @@ export class WysiwygEditor {
           }
           function render() {
             const ticket = ++renderTicket
+            clearTimeout(refreshTimer)
             img.alt = current.attrs.alt ?? ''
             img.title = current.attrs.title ?? ''
             const media = current.attrs.media as ImageMetadata | null
@@ -290,17 +294,30 @@ export class WysiwygEditor {
             if (media?.asset && owner.options.resolveAsset) {
               void owner.options
                 .resolveAsset(media.asset, abort.signal)
-                .then((url) => {
+                .then((delivery) => {
+                  const url = typeof delivery === 'string' ? delivery : delivery.url
                   if (
                     !abort.signal.aborted &&
                     ticket === renderTicket &&
                     (safeURL(url, true) || url.startsWith('blob:')) &&
                     !url.startsWith('asset:')
-                  )
+                  ) {
                     img.src = url
+                    delete figure.dataset.error
+                    if (
+                      typeof delivery !== 'string' &&
+                      Number.isFinite(delivery.expiresAt) &&
+                      delivery.expiresAt! > Date.now()
+                    )
+                      refreshTimer = setTimeout(
+                        render,
+                        Math.max(1000, delivery.expiresAt! - Date.now() - 5000),
+                      )
+                  }
                 })
                 .catch(() => {
-                  if (!abort.signal.aborted) figure.dataset.error = 'Image could not be resolved.'
+                  if (!abort.signal.aborted && ticket === renderTicket)
+                    figure.dataset.error = 'Image could not be resolved.'
                 })
             } else if (
               safeURL(src, true) &&
@@ -319,6 +336,7 @@ export class WysiwygEditor {
           }
           resize.observe(figure)
           render()
+          owner.imageRefreshers.add(render)
           return {
             dom: figure,
             update(updated) {
@@ -335,6 +353,8 @@ export class WysiwygEditor {
             },
             destroy() {
               abort.abort()
+              clearTimeout(refreshTimer)
+              owner.imageRefreshers.delete(render)
               resize.disconnect()
               if (layoutFrame !== undefined) cancelAnimationFrame(layoutFrame)
             },
@@ -549,6 +569,51 @@ export class WysiwygEditor {
         ? this.engine.getMarkdown()
         : this.engine.getHTML()
   }
+  /** Capture immutable publishing input; host resolution must never mutate the editing document. */
+  getHTMLSnapshot() {
+    this.assertAlive()
+    if (this.format === 'fountain')
+      throw new EditorError(
+        'UNSUPPORTED_FORMAT',
+        'Publishing HTML with image renditions requires Markdown or HTML.',
+      )
+    return {
+      id: this.input.id,
+      revision: this.revision,
+      html: this.engine.getHTML(),
+      images: structuredClone(this.imageMetadata()),
+    }
+  }
+  /** Refresh only ephemeral image presentation, preserving source, revision, selection and history. */
+  refreshImages() {
+    this.assertAlive()
+    for (const refresh of this.imageRefreshers) refresh()
+  }
+  selectImage(occurrenceId: string) {
+    this.assertAlive()
+    let found: number | undefined
+    this.engine.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'image' && node.attrs.media?.occurrenceId === occurrenceId) found = pos
+    })
+    return found === undefined ? false : this.engine.commands.setNodeSelection(found)
+  }
+  duplicateImage(occurrenceId: string) {
+    this.assertAlive()
+    if (this.options.readOnly) return false
+    let result = false
+    this.engine.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'image' && node.attrs.media?.occurrenceId === occurrenceId)
+        result = this.engine.commands.insertContentAt(pos + node.nodeSize, {
+          type: 'image',
+          attrs: {
+            ...node.attrs,
+            media: { ...node.attrs.media, occurrenceId: crypto.randomUUID() },
+          },
+        })
+    })
+    return result
+  }
+
   getSource() {
     const source = this.serialize()
     if (
@@ -744,6 +809,10 @@ export class WysiwygEditor {
           throw new EditorError('INVALID_FOCUS', 'Invalid focal point or aspect ratio.')
         const media = e.getAttributes('image').media ?? { occurrenceId: crypto.randomUUID() }
         return c
+          .command(({ tr }) => {
+            closeHistory(tr)
+            return true
+          })
           .updateAttributes('image', {
             media: { ...media, focus: data.focus, aspectRatio: data.aspectRatio },
           })

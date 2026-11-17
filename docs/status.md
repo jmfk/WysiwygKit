@@ -13,7 +13,8 @@ WysiwygKit 0.1.0 is an **early preview**, not a completed stable-release claim. 
 - Document identity/revision/save acknowledgement, atomic snapshots with source-bound metadata, stable image placements and per-placement non-destructive focus; manual focal cover preview.
 - Local image storage or async host upload/resolution callbacks on all library surfaces. A bounded presigned PUT helper is available; finalization belongs to the host.
 - Literal find/replace across inline marks, grapheme boundaries, safe link/paste actions, derived outline/count APIs and an opt-in bounded web recovery demo.
-- Automated tests, versioned native resource manifests, dependency notices, npm/NuGet packaging and CI jobs for web, Apple and Windows.
+- Optional browser media client and server-only S3/imgproxy library: verified immutable uploads, short-lived private previews, explicit public manifests and responsive HTML. Separate plain-web/React media demos share the same HTTP integration. See [media setup and limits](media-integrations.md).
+- Automated tests, versioned native resource manifests, dependency notices, npm/NuGet packaging and CI jobs for web, media providers, Apple and Windows.
 
 ## Verified locally — 2026-11-16
 
@@ -31,12 +32,21 @@ WysiwygKit 0.1.0 is an **early preview**, not a completed stable-release claim. 
 
 Local environment: macOS 26 arm64, Node 25.2.1, TypeScript 6.0.3, Swift 6.3.3, .NET SDK 11.0.100 targeting .NET 8 WPF. Tool versions are locked in package-lock/NuGet configuration. Current-SDK builds do not establish minimum-OS runtime compatibility.
 
+## Media integration verification — 2026-11-17
+
+- 29 unit regressions pass (five new delivery-refresh, stale callback, placement/undo and captured-publication cases).
+- 16 provider regressions pass against real MinIO `RELEASE.2025-09-07T16-13-09Z` and OSS imgproxy `v4.0.24`, using isolated RAM storage. Coverage includes digest/type/size validation, replay, namespace/receipt guards, immutable finalization across restart, restricted delete/read-only identities, signed transforms, actual focal crop pixels, EXIF orientation, bounded output, expiry and publication.
+- Nine new media browser journeys pass across Chromium, Firefox and WebKit, alongside all 30 existing browser checks and three existing visual checks. Browser suites run sequentially because they share a development port/artifact directory.
+- Typecheck, formatting, all four web library builds, production demo build, native resource checks and specification governance pass. Three actual macOS WKWebView/Swift tests pass with the rebuilt engine. Four npm tarballs contain entrypoints, types, licenses and READMEs.
+- The shared local MinIO provider has a full data disk and returns HTTP 507 for writes. Its neutral consumer admission exists, but the shared-provider journey is operationally blocked. No unrelated data or shared lifecycle was changed. The separately owned disposable test stack exercises the complete integration instead.
+- The media provider CI job provisions fresh isolated fixtures from checksum-pinned upstream binaries, without external storage credentials. New native HTTP provider demos, other S3 vendors and production hosting are not verified by these web/provider tests.
+
 ## Outstanding acceptance work
 
 - Native-language review of Swedish/Arabic catalogs; manual VoiceOver/Narrator, actual native IME/touch and minimum-OS/device validation.
 - Exhaustive unsupported-syntax diagnostics and format conformance beyond the committed corpus. Keep originals and inspect normalization diagnostics when evaluating new document classes.
 - Per-block/inline language sidecars for plain Markdown/Fountain. Root document language/direction and HTML metadata are supported; unsupported block-language mutations fail explicitly.
-- Responsive/publishing rendition resolution, private-delivery policy and tested real-provider S3 finalization/imgproxy conformance. Current callbacks and crop model are the integration foundation, not a provider certification.
+- Additional S3 provider conformance, native HTTP media demo journeys, production host authorization/quotas/retention and manual accessibility acceptance for media controls. The MinIO/imgproxy recipe is verified; it is not certification of every S3 vendor.
 - Reproducible performance baselines on representative large articles/screenplays and durable host-native recovery examples.
 - The optional Go service/containers remain conditional under PRD-0005. No Go backend artifact, registry publication or production deployment is claimed.
 

@@ -4,7 +4,7 @@ title: Non-destructive images and storage integrations
 status: in-progress
 locked: true
 created: 2026-11-16
-related_adrs: [ADR-0010, ADR-0011, ADR-0012]
+related_adrs: [ADR-0010, ADR-0011, ADR-0012, ADR-0014]
 ---
 
 # PRD-0004: Non-destructive images and storage integrations
@@ -106,11 +106,15 @@ A full digital asset manager, asset search/catalog service, folders/tags/rights 
 
 2026-11-16: Draft only. No storage provider, focal UI or image-server integration has been implemented or verified.
 
+- 2026-11-17: Optional S3/imgproxy libraries, plain-web/React media demos and provider/browser regressions are implemented under [ADR-0014](../adrs/active/0014-s3-imgproxy-reference-integration.md). See [integration setup](../../docs/media-integrations.md) and [verification evidence](../../docs/status.md). Status remains in progress for broader/manual/platform acceptance.
+
 ## Linked ADRs
 
 - [ADR-0010: Portable source metadata and non-destructive images](../adrs/active/0010-portable-media-metadata.md)
 - [ADR-0011: Storage and image delivery boundaries](../adrs/active/0011-storage-and-image-delivery.md)
 - [ADR-0012: Optional Go media companion](../adrs/active/0012-optional-go-companion.md)
+
+- [ADR-0014: S3 and imgproxy reference integration](../adrs/active/0014-s3-imgproxy-reference-integration.md)
 
 ## References
 
@@ -120,4 +124,4 @@ A full digital asset manager, asset search/catalog service, folders/tags/rights 
 
 ## Completion Evidence
 
-Pending implementation and adapter conformance evidence.
+2026-11-17: 16 real MinIO/imgproxy regressions and nine cross-browser media journeys pass. Five new unit regressions cover presentation-only refresh, stale callbacks, independent placements and captured publication. Full evidence and remaining gates: [implementation status](../../docs/status.md).

@@ -10,6 +10,7 @@ A shared Markdown, publishing HTML and Fountain editor engine, with plain web, R
 | --- | --- |
 | `packages/core` | Framework-independent TypeScript editor, commands, codecs, themes and metadata |
 | `packages/react` | React component using the same engine |
+| `packages/media`, `packages/media-server` | Optional browser media client and server-only S3/imgproxy integration |
 | `packages/swift` | SwiftUI + WKWebView integration for macOS/iOS |
 | `packages/windows` | C# WPF + WebView2 integration |
 | `packages/native` | Shared offline bridge entry, bundled into both native libraries |
@@ -27,6 +28,10 @@ npm run dev
 ```
 
 Open [plain web](http://localhost:13700/demos/web/) or [React](http://localhost:13700/demos/react/). Both demos load all three formats, switch theme/UI locale/read-only state, insert images and tables in rich formats and export portable snapshots. Local demo image insertion uses a bounded data URI; it does not upload files.
+
+## S3 + imgproxy demos
+
+See [media integration setup](docs/media-integrations.md) for separate plain-web and React demos, scoped storage admission, disposable provider tests and responsive publication. The editor remains usable without these services.
 
 ## Plain web
 

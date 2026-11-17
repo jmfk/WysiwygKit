@@ -18,6 +18,7 @@ Accepted decisions record the selected planning architecture. They do not imply 
 | ADR-0011 | [Separate storage, asset identity and image delivery](active/0011-storage-and-image-delivery.md) | accepted | PRD-0004, PRD-0005 |
 | ADR-0012 | [One optional Go companion with binaries and OCI images](active/0012-optional-go-companion.md) | accepted | PRD-0004, PRD-0005, PRD-0006 |
 | ADR-0013 | [Scope gates, editing productivity and host-owned recovery](active/0013-scope-and-host-owned-recovery.md) | accepted | PRD-0002, PRD-0003, PRD-0004, PRD-0005, PRD-0006 |
+| ADR-0014 | [S3 and imgproxy reference integration](active/0014-s3-imgproxy-reference-integration.md) | accepted | PRD-0004 |
 
 ## Archived Decisions
 
