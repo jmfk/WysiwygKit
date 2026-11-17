@@ -101,14 +101,17 @@ export function createMediaClient(
           'IMAGE_MAPPING',
           'Publishing image metadata does not match the captured HTML.',
         )
-      for (let i = 0; i < images.length; i++) {
-        const metadata = input.images[i]
+      // Validate the complete capture before the first irreversible public publication.
+      for (const metadata of input.images) {
         if (!metadata.asset)
           throw new MediaClientError(
             'UNMANAGED_IMAGE',
             'A publishing host must explicitly resolve unmanaged image references.',
           )
-        const publication = await publish(metadata.asset, metadata, signal),
+      }
+      for (let i = 0; i < images.length; i++) {
+        const metadata = input.images[i]
+        const publication = await publish(metadata.asset!, metadata, signal),
           variants = publication.variants
         if (!variants.length)
           throw new MediaClientError('NO_RENDITIONS', 'The host returned no public renditions.')

@@ -95,13 +95,7 @@ export const server = createServer(async (request, response) => {
       const publication = await host.publish(input.id, input.version, input)
       result = {
         ...publication,
-        variants: publication.widths.map((width) => ({
-          url: host.publicURL(publication.id, width),
-          width,
-          height: Math.round(
-            width / (publication.aspectRatio ?? publication.asset.width / publication.asset.height),
-          ),
-        })),
+        variants: host.publicationVariants(publication),
       }
     } else throw new MediaError('NOT_FOUND', 'Unknown media operation.', 404)
     json(response, 200, result)

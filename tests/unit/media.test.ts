@@ -157,3 +157,79 @@ describe('ephemeral delivery and captured publication', () => {
     ).rejects.toMatchObject({ code: 'INVALID_PUBLICATION' })
   })
 })
+
+describe('delivery refresh failures', () => {
+  it('retains the current presentation and retries a transient renewal failure', async () => {
+    const editor = await make()
+    vi.useFakeTimers()
+    const resolve = vi
+      .fn()
+      .mockImplementationOnce(async () => ({
+        url: 'https://media.example/first.png',
+        expiresAt: Date.now() + 6000,
+      }))
+      .mockRejectedValueOnce(new Error('Temporary outage'))
+      .mockImplementation(async () => ({
+        url: 'https://media.example/renewed.png',
+        expiresAt: Date.now() + 60000,
+      }))
+    editor.configure({ resolveAsset: resolve })
+    editor.refreshImages()
+    await Promise.resolve()
+    const image = document.querySelector('.wk-image img')!
+    const before = editor.state()
+    await vi.advanceTimersByTimeAsync(1001)
+    expect(image.getAttribute('src')).toBe('https://media.example/first.png')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(resolve.mock.calls.length).toBeGreaterThan(2)
+    expect(image.getAttribute('src')).toBe('https://media.example/renewed.png')
+    expect(editor.state().revision).toBe(before.revision)
+    expect(editor.state().dirty).toBe(before.dirty)
+  })
+})
+
+it('preflights all placements before making any public asset', async () => {
+  const perform = vi.fn()
+  const client = createMediaClient('https://host.example', { fetch: perform })
+  await expect(
+    client.publishHTML({
+      id: 'x',
+      revision: 1,
+      html: '<img src="asset:example@1"><img src="unmanaged.png">',
+      images: [{ occurrenceId: 'managed', asset }, { occurrenceId: 'external' }],
+    }),
+  ).rejects.toMatchObject({ code: 'UNMANAGED_IMAGE' })
+  expect(perform).not.toHaveBeenCalled()
+})
+
+it('renews a capability that expires while its resolver is in flight', async () => {
+  const editor = await make()
+  vi.useFakeTimers()
+  const resolve = vi
+    .fn()
+    .mockResolvedValueOnce({ url: 'https://media.example/expired.png', expiresAt: Date.now() - 1 })
+    .mockImplementation(async () => ({
+      url: 'https://media.example/fresh.png',
+      expiresAt: Date.now() + 60000,
+    }))
+  editor.configure({ resolveAsset: resolve })
+  editor.refreshImages()
+  await vi.advanceTimersByTimeAsync(1001)
+  expect(document.querySelector('.wk-image img')?.getAttribute('src')).toBe(
+    'https://media.example/fresh.png',
+  )
+  expect(editor.getSource()).not.toContain('media.example')
+})
+
+it('does not overflow the timer for delivery lifetimes longer than 25 days', async () => {
+  const editor = await make()
+  vi.useFakeTimers()
+  const resolve = vi.fn(async () => ({
+    url: 'https://media.example/long-lived.png',
+    expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
+  }))
+  editor.configure({ resolveAsset: resolve })
+  editor.refreshImages()
+  await vi.advanceTimersByTimeAsync(100)
+  expect(resolve).toHaveBeenCalledTimes(1)
+})

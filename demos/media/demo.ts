@@ -23,11 +23,13 @@ export function mountMediaDemo(editor: WysiwygEditor) {
     published = $<HTMLTextAreaElement>('published-html')
   let current: ImageMetadata | undefined
   let abort = new AbortController()
-  const safe = async (action: () => Promise<unknown> | unknown) => {
+  let previewKey = ''
+  const safe = async (action: () => Promise<unknown> | unknown, isCurrent = () => true) => {
     error.textContent = ''
     try {
       await action()
     } catch {
+      if (!isCurrent()) return
       error.textContent =
         'The media operation failed. Check the local API, storage and image server; your editing document is unchanged.'
     }
@@ -45,6 +47,12 @@ export function mountMediaDemo(editor: WysiwygEditor) {
     )
     if (images.some((m) => m.occurrenceId === selected)) selector.value = selected
     current = images.find((m) => m.occurrenceId === selector.value)
+    const key = JSON.stringify([editor.state().documentId, current])
+    if (key !== previewKey) {
+      abort.abort()
+      previewKey = key
+      $('previews').replaceChildren()
+    }
     $<HTMLInputElement>('focus-x').value = String(current?.focus?.x ?? 0.5)
     $<HTMLInputElement>('focus-y').value = String(current?.focus?.y ?? 0.5)
     status.textContent = `${images.length} placement(s) · revision ${editor.state().revision} · originals stay in object storage`
@@ -74,11 +82,15 @@ export function mountMediaDemo(editor: WysiwygEditor) {
     }
   }
   $('refresh-images').onclick = () => editor.refreshImages()
-  $('preview-variants').onclick = () =>
+  $('preview-variants').onclick = () => {
+    abort.abort()
+    const controller = new AbortController(),
+      placement = current && structuredClone(current),
+      key = previewKey
+    abort = controller
+    const isCurrent = () => !controller.signal.aborted && key === previewKey
     void safe(async () => {
-      if (!current?.asset) throw Error('No managed asset')
-      abort.abort()
-      abort = new AbortController()
+      if (!placement?.asset) throw Error('No managed asset')
       const previews = $('previews')
       previews.replaceChildren()
       for (const [name, width, height] of [
@@ -87,11 +99,12 @@ export function mountMediaDemo(editor: WysiwygEditor) {
         ['Portrait', 240, 360],
       ] as const) {
         const delivery = await media.preview(
-            current.asset,
-            { width, height, fit: 'cover', focus: current.focus },
-            abort.signal,
-          ),
-          figure = document.createElement('figure'),
+          placement.asset,
+          { width, height, fit: 'cover', focus: placement.focus },
+          controller.signal,
+        )
+        if (!isCurrent()) return
+        const figure = document.createElement('figure'),
           img = document.createElement('img'),
           caption = document.createElement('figcaption')
         img.src = delivery.url
@@ -102,7 +115,8 @@ export function mountMediaDemo(editor: WysiwygEditor) {
         figure.append(img, caption)
         previews.append(figure)
       }
-    })
+    }, isCurrent)
+  }
   $('save-media').onclick = () =>
     void safe(async () => {
       const value = await editor.getSnapshot()
@@ -136,11 +150,19 @@ export function mountMediaDemo(editor: WysiwygEditor) {
       })
       refresh()
     })
-  const original = editor.getOptions().onChange
+  const original = editor.getOptions()
+  let documentId = editor.state().documentId
   editor.configure({
     onChange: (state) => {
-      original?.(state)
+      original.onChange?.(state)
       refresh()
+    },
+    onState: (state) => {
+      original.onState?.(state)
+      if (state.documentId !== documentId) {
+        documentId = state.documentId
+        refresh()
+      }
     },
   })
   refresh()

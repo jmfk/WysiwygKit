@@ -15,6 +15,7 @@ import {
   type Variant,
 } from '../../packages/media-server/src/index'
 import { focalCover } from '../../packages/core/src/media'
+import { animatedPNG } from './animated-png'
 const { host, options } = mediaHostFromEnvironment()
 let fixture: Buffer, asset: Awaited<ReturnType<typeof host.completeUpload>>
 const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex')
@@ -123,6 +124,25 @@ describe('real S3-compatible immutable upload', () => {
     ).toBe(true)
     expect(await code(() => host.completeUpload(plan.receipt))).toBe('INVALID_IMAGE')
   })
+  it('rejects animated PNG even when the decoder exposes only its default frame', async () => {
+    const bytes = animatedPNG()
+    expect(Array.from(await sharp(bytes).raw().toBuffer())).toEqual([255, 0, 0, 255])
+    const plan = await host.beginUpload({
+      size: bytes.length,
+      mimeType: 'image/png',
+      sha256: digest(bytes),
+    })
+    expect(
+      (
+        await fetch(plan.url, {
+          method: 'PUT',
+          headers: plan.headers,
+          body: bytes as unknown as BodyInit,
+        })
+      ).ok,
+    ).toBe(true)
+    expect(await code(() => host.completeUpload(plan.receipt))).toBe('INVALID_IMAGE')
+  })
   it('binds the checksum to the actual captured staging bytes', async () => {
     const plan = await host.beginUpload({
       size: fixture.length,
@@ -171,6 +191,23 @@ describe('real pinned OSS imgproxy', () => {
     expect(meta.height).toBe(2048)
     expect(meta.width).toBe(delivery.width)
     expect(meta.height).toBe(delivery.height)
+  })
+  it('advertises actual, unique public rendition dimensions for tall originals', async () => {
+    const bytes = await sharp({
+      create: { width: 100, height: 1000, channels: 3, background: '#123456' },
+    })
+      .png()
+      .toBuffer()
+    const original = (await upload(bytes)).asset
+    const publication = await host.publish(original.id, '1', {})
+    const variants = host.publicationVariants(publication)
+    expect(variants).toHaveLength(1)
+    const slot = Number(new URL(variants[0].url).pathname.split('/').pop()!.replace('.webp', ''))
+    const rendered = await host.publicBytes(publication.id, slot)
+    const actual = await sharp(rendered.bytes).metadata()
+    expect(variants[0].width).toBe(actual.width)
+    expect(variants[0].height).toBe(actual.height)
+    expect(variants[0].width).toBeLessThan(slot)
   })
   it('uses signed S3 sources and refuses a modified transform signature', async () => {
     const url = signImgproxy(

@@ -124,4 +124,4 @@ A full digital asset manager, asset search/catalog service, folders/tags/rights 
 
 ## Completion Evidence
 
-2026-11-17: 16 real MinIO/imgproxy regressions and nine cross-browser media journeys pass. Five new unit regressions cover presentation-only refresh, stale callbacks, independent placements and captured publication. Full evidence and remaining gates: [implementation status](../../docs/status.md).
+2026-11-17: 18 real MinIO/imgproxy regressions, three deterministic server regressions and 15 cross-browser media journeys pass. Nine media unit regressions cover presentation-only refresh/retry/timer bounds, stale callbacks, independent placements and captured/preflight publication. Full evidence and remaining gates: [implementation status](../../docs/status.md).

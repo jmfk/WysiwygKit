@@ -22,16 +22,17 @@ test('typing, formatting, undo and source snapshot', async ({ page }) => {
   expect(await page.locator('#source').inputValue()).not.toContain('A new ending.')
 })
 test('table insertion and row editing through public commands', async ({ page }) => {
+  const existing = page.locator('.tiptap table').first()
+  const originalRows = await existing.locator('tr').count()
   await page.evaluate(() => window.demoEditor.execute('table'))
   await expect(page.locator('.tiptap table')).toHaveCount(2)
-  const first = page.locator('.tiptap table').first()
-  const before = await first.locator('tr').count()
-  await first.getByText('Platform', { exact: true }).click()
-  await expect
-    .poll(() => page.evaluate(() => window.demoEditor.commandState('addRow').enabled))
-    .toBe(true)
-  await page.evaluate(() => window.demoEditor.execute('addRow'))
-  await expect(first.locator('tr')).toHaveCount(before + 1)
+  // Insertion selects its new table. Exercise the API without racing a separate DOM selectionchange.
+  const inserted = page.locator('.tiptap table').last()
+  const before = await inserted.locator('tr').count()
+  expect(await page.evaluate(() => window.demoEditor.commandState('addRow').enabled)).toBe(true)
+  expect(await page.evaluate(() => window.demoEditor.execute('addRow'))).toBe(true)
+  await expect(inserted.locator('tr')).toHaveCount(before + 1)
+  await expect(existing.locator('tr')).toHaveCount(originalRows)
 })
 test('Fountain has screenplay elements and protected source metadata', async ({ page }) => {
   await page.locator('#format').selectOption('fountain')

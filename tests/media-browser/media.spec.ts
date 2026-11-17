@@ -111,3 +111,72 @@ test('host rejects an unrelated browser origin and missing demo intent', async (
     ),
   ).toBe(403)
 })
+
+for (const change of ['placement', 'document'] as const) {
+  test(`pending crops are discarded after changing ${change}`, async ({ page }) => {
+    await page.goto('/demos/media/')
+    await expect(page.locator('.tiptap')).toHaveCount(1)
+    await page.locator('[data-command=image]').click()
+    await page
+      .locator('input[type=file]')
+      .setInputFiles(fileURLToPath(new URL('../fixtures/pixel.png', import.meta.url)))
+    await expect(page.locator('#placement option')).toHaveCount(1)
+    await page.locator('#duplicate-placement').click()
+    await expect(page.locator('#placement option')).toHaveCount(2)
+    let release!: () => void, started!: () => void, finished!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const pending = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const done = new Promise<void>((resolve) => {
+      finished = resolve
+    })
+    await page.route('**/api/media/resolve', async (route) => {
+      if (route.request().postDataJSON()?.variant?.width !== 480) {
+        await route.continue()
+        return
+      }
+      started()
+      await gate
+      // Non-secret synthetic response: a cancelled client must ignore even a late success.
+      await route
+        .fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            url: '/tests/fixtures/pixel.png',
+            width: 480,
+            height: 270,
+            expiresAt: Date.now() + 60000,
+          }),
+        })
+        .catch(() => undefined)
+      finished()
+    })
+    await page.locator('#preview-variants').click()
+    await pending
+    if (change === 'placement') await page.locator('#placement').selectOption({ index: 1 })
+    else
+      await page.evaluate(() =>
+        window.mediaEditor.loadDocument({
+          id: 'replacement',
+          format: 'markdown',
+          source: 'Replacement',
+        }),
+      )
+    release()
+    await done
+    // A fresh request completes after the delayed response and lets its continuations settle.
+    await page.evaluate(async () => {
+      await fetch('/api/media/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+    })
+    await expect(page.locator('#previews img')).toHaveCount(0)
+    await expect(page.locator('#media-error')).toBeEmpty()
+  })
+}

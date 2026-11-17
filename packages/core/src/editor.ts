@@ -251,6 +251,8 @@ export class WysiwygEditor {
             renderTicket = 0
           let layoutFrame: number | undefined
           let refreshTimer: ReturnType<typeof setTimeout> | undefined
+          let presentationKey = '',
+            retryDelay = 1000
           const resize = new ResizeObserver(() => {
             if (layoutFrame !== undefined) cancelAnimationFrame(layoutFrame)
             layoutFrame = requestAnimationFrame(layout)
@@ -290,12 +292,23 @@ export class WysiwygEditor {
             img.title = current.attrs.title ?? ''
             const media = current.attrs.media as ImageMetadata | null
             const src = String(current.attrs.src ?? '')
-            img.removeAttribute('src')
+            const key = JSON.stringify([src, media?.asset?.id, media?.asset?.version])
+            if (key !== presentationKey) {
+              img.removeAttribute('src')
+              presentationKey = key
+              retryDelay = 1000
+            }
             if (media?.asset && owner.options.resolveAsset) {
               void owner.options
                 .resolveAsset(media.asset, abort.signal)
                 .then((delivery) => {
                   const url = typeof delivery === 'string' ? delivery : delivery.url
+                  if (
+                    typeof delivery !== 'string' &&
+                    delivery.expiresAt !== undefined &&
+                    (!Number.isFinite(delivery.expiresAt) || delivery.expiresAt <= Date.now())
+                  )
+                    throw new Error('Image delivery expired before it could be displayed.')
                   if (
                     !abort.signal.aborted &&
                     ticket === renderTicket &&
@@ -303,6 +316,7 @@ export class WysiwygEditor {
                     !url.startsWith('asset:')
                   ) {
                     img.src = url
+                    retryDelay = 1000
                     delete figure.dataset.error
                     if (
                       typeof delivery !== 'string' &&
@@ -311,13 +325,19 @@ export class WysiwygEditor {
                     )
                       refreshTimer = setTimeout(
                         render,
-                        Math.max(1000, delivery.expiresAt! - Date.now() - 5000),
+                        Math.min(
+                          2_147_483_647,
+                          Math.max(1000, delivery.expiresAt! - Date.now() - 5000),
+                        ),
                       )
                   }
                 })
                 .catch(() => {
-                  if (!abort.signal.aborted && ticket === renderTicket)
+                  if (!abort.signal.aborted && ticket === renderTicket) {
                     figure.dataset.error = 'Image could not be resolved.'
+                    refreshTimer = setTimeout(render, retryDelay)
+                    retryDelay = Math.min(retryDelay * 2, 30000)
+                  }
                 })
             } else if (
               safeURL(src, true) &&

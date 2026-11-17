@@ -92,6 +92,36 @@ export function validateVariant(input: Variant): Required<Variant> {
     format,
   }
 }
+function renditionSize(asset: Pick<Asset, 'width' | 'height'>, variant: Required<Variant>) {
+  const scale = Math.min(variant.width / asset.width, (variant.height || 2048) / asset.height)
+  return {
+    width: variant.fit === 'cover' ? variant.width : Math.max(1, Math.round(asset.width * scale)),
+    height:
+      variant.fit === 'cover' ? variant.height : Math.max(1, Math.round(asset.height * scale)),
+  }
+}
+function publicationVariant(publication: Publication, width: number): Required<Variant> {
+  return validateVariant({
+    width,
+    height: publication.aspectRatio ? Math.round(width / publication.aspectRatio) : undefined,
+    fit: publication.aspectRatio ? 'cover' : 'contain',
+    focus: publication.focus,
+    format: 'webp',
+  })
+}
+// Some decoders expose only the default PNG frame. Inspect chunk boundaries rather than image payload text.
+function animatedPNG(bytes: Buffer) {
+  for (let offset = 8; offset + 12 <= bytes.length;) {
+    const length = bytes.readUInt32BE(offset),
+      end = offset + 12 + length
+    if (end > bytes.length) break
+    const type = bytes.toString('ascii', offset + 4, offset + 8)
+    if (type === 'acTL') return true
+    if (type === 'IEND') break
+    offset = end
+  }
+  return false
+}
 /** The caller supplies an authorized, server-derived source. This never accepts a browser URL. */
 export function signImgproxy(
   source: string,
@@ -265,33 +295,58 @@ export class S3MediaHost {
       throw new MediaError('STORAGE_UNAVAILABLE', 'Object storage is unavailable.', 503)
     }
   }
+  private async finalized(receipt: Receipt): Promise<Asset> {
+    const head = await this.options.s3.send(
+      new HeadObjectCommand({
+        Bucket: this.options.bucket,
+        Key: this.key(receipt.id, receipt.version),
+      }),
+    )
+    if (head.Metadata?.digest !== receipt.digest)
+      throw new MediaError('UPLOAD_CONFLICT', 'An incompatible original already exists.', 409)
+    return this.fromHead(receipt.id, receipt.version, head)
+  }
   async completeUpload(token: string): Promise<Asset> {
     const receipt = this.decode(token, 'upload'),
       key = this.key(receipt.id, receipt.version),
       params = { Bucket: this.options.bucket, Key: key }
     try {
-      const head = await this.options.s3.send(new HeadObjectCommand(params))
-      if (head.Metadata?.digest !== receipt.digest)
-        throw new MediaError('UPLOAD_CONFLICT', 'An incompatible original already exists.', 409)
-      return this.fromHead(receipt.id, receipt.version, head)
+      return await this.finalized(receipt)
     } catch (e) {
       if (!isMissing(e)) throw e
     }
     const stage = `${this.options.namespace}/staging/${receipt.id}`
-    const response = await this.options.s3.send(
-      new GetObjectCommand({ Bucket: this.options.bucket, Key: stage }),
-    )
-    if (!response.Body || response.ContentLength !== receipt.size)
-      throw new MediaError('UPLOAD_SIZE_MISMATCH', 'The uploaded size does not match its plan.')
-    const chunks: Buffer[] = []
-    let size = 0
-    for await (const part of response.Body as AsyncIterable<Uint8Array>) {
-      size += part.length
-      if (size > 4_000_000)
-        throw new MediaError('UPLOAD_TOO_LARGE', 'The uploaded image exceeds the limit.')
-      chunks.push(Buffer.from(part))
+    let response
+    try {
+      response = await this.options.s3.send(
+        new GetObjectCommand({ Bucket: this.options.bucket, Key: stage }),
+      )
+    } catch (e) {
+      // Another finalizer may commit and remove staging after our initial HEAD miss.
+      if (isMissing(e)) return this.finalized(receipt)
+      throw e
     }
-    const bytes = Buffer.concat(chunks)
+    const body = response.Body as
+      | (AsyncIterable<Uint8Array> & { destroy?: () => void; cancel?: () => Promise<void> })
+      | undefined
+    let size = 0,
+      bytes: Buffer
+    try {
+      if (!body || response.ContentLength !== receipt.size)
+        throw new MediaError('UPLOAD_SIZE_MISMATCH', 'The uploaded size does not match its plan.')
+      const chunks: Buffer[] = []
+      for await (const part of body) {
+        size += part.length
+        if (size > 4_000_000)
+          throw new MediaError('UPLOAD_TOO_LARGE', 'The uploaded image exceeds the limit.')
+        chunks.push(Buffer.from(part))
+      }
+      bytes = Buffer.concat(chunks)
+    } finally {
+      // An early validation rejection must release the HTTP connection, including an unread body.
+      if (body?.destroy) body.destroy()
+      else await body?.cancel?.().catch(() => undefined)
+    }
     if (size !== receipt.size || sha(bytes) !== receipt.digest)
       throw new MediaError(
         'UPLOAD_DIGEST_MISMATCH',
@@ -304,7 +359,12 @@ export class S3MediaHost {
         failOn: 'warning',
       }).metadata()
       mime = allowedTypes[metadata.format ?? '']
-      if (!mime || mime !== receipt.mime || (metadata.pages ?? 1) > 1)
+      if (
+        !mime ||
+        mime !== receipt.mime ||
+        (metadata.pages ?? 1) > 1 ||
+        (metadata.format === 'png' && animatedPNG(bytes))
+      )
         throw new Error('Unsupported image')
       const decoded = await sharp(bytes, { limitInputPixels: 32_000_000, failOn: 'warning' })
         .rotate()
@@ -333,10 +393,7 @@ export class S3MediaHost {
       )
     } catch (e) {
       if (!isConflict(e)) throw e
-      const head = await this.options.s3.send(new HeadObjectCommand(params))
-      if (head.Metadata?.digest !== receipt.digest)
-        throw new MediaError('UPLOAD_CONFLICT', 'An incompatible original already exists.', 409)
-      return this.fromHead(receipt.id, receipt.version, head)
+      return this.finalized(receipt)
     }
     // Cleanup is restricted to this receipt's staging object. A live PUT grant may recreate it until expiry.
     await this.options.s3
@@ -363,11 +420,7 @@ export class S3MediaHost {
       exp,
       variant,
     })
-    const scale = Math.min(variant.width / asset.width, (variant.height || 2048) / asset.height)
-    const width =
-      variant.fit === 'cover' ? variant.width : Math.max(1, Math.round(asset.width * scale))
-    const height =
-      variant.fit === 'cover' ? variant.height : Math.max(1, Math.round(asset.height * scale))
+    const { width, height } = renditionSize(asset, variant)
     return {
       url: new URL(`/api/media/preview/${token}`, this.options.publicOrigin).href,
       expiresAt: exp * 1000,
@@ -441,6 +494,19 @@ export class S3MediaHost {
     }
     return publication
   }
+  publicationVariants(publication: Publication) {
+    const seen = new Set<number>()
+    return publication.widths
+      .map((width) => ({
+        url: this.publicURL(publication.id, width),
+        ...renditionSize(publication.asset, publicationVariant(publication, width)),
+      }))
+      .filter((variant) => {
+        if (seen.has(variant.width)) return false
+        seen.add(variant.width)
+        return true
+      })
+  }
   publicURL(id: string, width: number) {
     if (!/^[a-f0-9]{64}$/.test(id) || ![320, 640, 960].includes(width))
       throw new MediaError('INVALID_PUBLICATION', 'Unknown publication rendition.', 404)
@@ -466,13 +532,11 @@ export class S3MediaHost {
     const publication = JSON.parse(await result.Body.transformToString()) as Publication
     if (!publication.widths.includes(width))
       throw new MediaError('INVALID_VARIANT', 'Unpublished rendition.', 404)
-    return this.render(publication.asset.id, publication.asset.version, {
-      width,
-      height: publication.aspectRatio ? Math.round(width / publication.aspectRatio) : undefined,
-      fit: publication.aspectRatio ? 'cover' : 'contain',
-      focus: publication.focus,
-      format: 'webp',
-    })
+    return this.render(
+      publication.asset.id,
+      publication.asset.version,
+      publicationVariant(publication, width),
+    )
   }
 }
 export function mediaHostFromEnvironment(env: NodeJS.ProcessEnv = process.env) {
