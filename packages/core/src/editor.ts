@@ -347,6 +347,7 @@ export class WysiwygEditor {
                 !/^https?:\/\//i.test(src))
             )
               img.src = src
+            else img.removeAttribute('src')
             img.onload = layout
             layout()
           }

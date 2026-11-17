@@ -233,3 +233,42 @@ it('does not overflow the timer for delivery lifetimes longer than 25 days', asy
   await vi.advanceTimersByTimeAsync(100)
   expect(resolve).toHaveBeenCalledTimes(1)
 })
+
+it.each([{ aspectRatio: 4 }, { focus: { x: -1, y: 0.5 } }])(
+  'preflights invalid publication geometry before any public write: %j',
+  async (invalid) => {
+    const perform = vi.fn()
+    const client = createMediaClient('https://host.example', { fetch: perform })
+    await expect(
+      client.publishHTML({
+        id: 'x',
+        revision: 1,
+        html: '<img src="asset:example@1"><img src="asset:example@1">',
+        images: [
+          { occurrenceId: 'first', asset, aspectRatio: 1 },
+          { occurrenceId: 'second', asset, ...invalid },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_VARIANT' })
+    expect(perform).not.toHaveBeenCalled()
+  },
+)
+
+it('removes unmanaged presentation when the current remote-image policy disallows it', async () => {
+  const editor = await make()
+  editor.configure({ allowRemoteImages: true })
+  await editor.loadDocument({
+    id: 'remote',
+    format: 'markdown',
+    source: '![Remote](https://media.example/remote.png)',
+  })
+  const image = document.querySelector('.wk-image img')!
+  expect(image.getAttribute('src')).toBe('https://media.example/remote.png')
+  editor.configure({ allowRemoteImages: false })
+  editor.refreshImages()
+  expect(image.hasAttribute('src')).toBe(false)
+  const id = editor.getHTMLSnapshot().images[0].occurrenceId
+  editor.selectImage(id)
+  editor.execute('imageAlt', 'Updated alternative')
+  expect(image.hasAttribute('src')).toBe(false)
+})

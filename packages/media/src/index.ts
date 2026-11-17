@@ -28,6 +28,21 @@ export type PublishingInput = {
   images: ImageMetadata[]
 }
 export type PublishingOutput = { id: string; revision: number; html: string }
+/** Publication limits shared with the reference host, narrower than general editor crop metadata. */
+export function validPublicationMetadata(
+  input: Pick<ImageMetadata, 'focus' | 'aspectRatio'>,
+): boolean {
+  if (!input || typeof input !== 'object') return false
+  const { focus, aspectRatio } = input
+  return (
+    (aspectRatio === undefined ||
+      (Number.isFinite(aspectRatio) && aspectRatio >= 0.5 && aspectRatio <= 3)) &&
+    (focus === undefined ||
+      (!!focus &&
+        typeof focus === 'object' &&
+        [focus.x, focus.y].every((n) => Number.isFinite(n) && n >= 0 && n <= 1)))
+  )
+}
 export class MediaClientError extends Error {
   constructor(
     public code: string,
@@ -107,6 +122,11 @@ export function createMediaClient(
           throw new MediaClientError(
             'UNMANAGED_IMAGE',
             'A publishing host must explicitly resolve unmanaged image references.',
+          )
+        if (!validPublicationMetadata(metadata))
+          throw new MediaClientError(
+            'INVALID_VARIANT',
+            'Publication requires a valid focal point and an aspect ratio between 0.5 and 3.',
           )
       }
       for (let i = 0; i < images.length; i++) {

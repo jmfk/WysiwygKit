@@ -34,7 +34,7 @@ Local environment: macOS 26 arm64, Node 25.2.1, TypeScript 6.0.3, Swift 6.3.3, .
 
 ## Media integration verification — 2026-11-17
 
-- 33 unit regressions pass, including nine media cases covering refresh/retry/expiry/timer bounds, stale callbacks, placement/undo and captured/preflight publication.
+- 36 unit regressions pass, including 12 media cases covering refresh/retry/expiry/timer bounds, stale callbacks, placement/undo and captured/preflight publication and policy invalidation.
 - 18 live provider regressions and three deterministic server regressions pass. The live cases run against real MinIO `RELEASE.2025-09-07T16-13-09Z` and OSS imgproxy `v4.0.24`, using isolated RAM storage. Coverage includes digest/type/size/APNG validation, replay, namespace/receipt guards, immutable finalization across restart/interleavings, response stream release, restricted delete/read-only identities, signed transforms, actual focal crop pixels, EXIF orientation, bounded output dimensions, expiry and publication.
 - Fifteen media browser journeys pass across Chromium, Firefox and WebKit, including deferred crop responses after selection/document changes, alongside all 30 existing browser checks and three existing visual checks. Browser suites run sequentially because they share a development port/artifact directory.
 - Typecheck, formatting, all four web library builds, production demo build, native resource checks and specification governance pass. Three actual macOS WKWebView/Swift tests pass with the rebuilt engine. Four npm tarballs contain entrypoints, types, licenses and READMEs.

@@ -22,6 +22,7 @@ export class MediaError extends Error {
   }
 }
 import type { Variant, UploadPlan, Delivery, Publication } from '@wysiwygkit/media'
+import { validPublicationMetadata } from '@wysiwygkit/media'
 export type { Variant, UploadPlan, Delivery, Publication } from '@wysiwygkit/media'
 export type MediaHostOptions = {
   s3: S3Client
@@ -461,14 +462,14 @@ export class S3MediaHost {
     version: string,
     input: { focus?: Point; aspectRatio?: number },
   ): Promise<Publication> {
+    if (!validPublicationMetadata(input))
+      throw new MediaError(
+        'INVALID_VARIANT',
+        'Publication requires a valid focal point and an aspect ratio between 0.5 and 3.',
+      )
     const asset = await this.asset(id, version),
       focus = validateVariant({ width: 320, focus: input.focus }).focus,
       aspectRatio = input.aspectRatio
-    if (
-      aspectRatio !== undefined &&
-      (!Number.isFinite(aspectRatio) || aspectRatio < 0.5 || aspectRatio > 3)
-    )
-      throw new MediaError('INVALID_VARIANT', 'Publication aspect ratio must be between 0.5 and 3.')
     const descriptor = {
         asset,
         focus,
